@@ -15,6 +15,10 @@ from matplotlib.animation import FuncAnimation
 from .heat2d import solve_heat, animate_heat, step_heat
 from .wave2d import solve_wave, animate_wave, step_wave, step_wave_first
 from .wave2d import create_gaussian_pulse, create_circular_wave
+from .boundary_conditions import (
+    BoundarySpec, solve_heat_with_boundaries, solve_wave_with_boundaries,
+    BoundaryType  # Use the enum from boundary_conditions
+)
 
 
 class EquationType(Enum):
@@ -22,17 +26,11 @@ class EquationType(Enum):
     HEAT = "heat"
     WAVE = "wave"
 
-
-class BoundaryType(Enum):
-    """Supported boundary condition types."""
-    DIRICHLET = "dirichlet"  # Fixed value
-    NEUMANN = "neumann"      # Fixed flux/derivative
-    PERIODIC = "periodic"    # Wrap-around
-    ABSORBING = "absorbing"  # Wave-absorbing (for wave equation)
+# BoundaryType is imported from boundary_conditions module (for wave equation)
 
 
 class BoundaryCondition:
-    """Boundary condition specification."""
+    """Boundary condition specification - Enhanced version."""
     
     def __init__(self, boundary_type: BoundaryType, value: float = 0.0):
         self.type = boundary_type
@@ -57,6 +55,10 @@ class BoundaryCondition:
     def absorbing(cls):
         """Absorbing boundary condition (for waves)."""
         return cls(BoundaryType.ABSORBING)
+    
+    def to_boundary_spec(self):
+        """Convert to BoundarySpec for the boundary_conditions module."""
+        return BoundarySpec.uniform(self.type, self.value)
 
 
 class InitialConditions:
@@ -305,15 +307,43 @@ class PDESolver:
         # Get parameters
         dt = self.parameters.get('dt', 0.1)
         
+        # Convert boundary condition to BoundarySpec
+        boundary_spec = self.boundary.to_boundary_spec()
+        
         if self.equation == EquationType.HEAT:
             alpha = self.parameters.get('alpha', 1.0)
-            return solve_heat(self._initial_conditions, α=alpha, dt=dt,
-                            dx=self.dx, dy=self.dy, steps=steps)
+            
+            # Always use flexible boundary conditions for non-default boundaries
+            # Only use original solver for default Dirichlet(0.0)
+            if (self.boundary.type == BoundaryType.DIRICHLET and 
+                self.boundary.value == 0.0):
+                # Use original solver for default case (better performance)
+                return solve_heat(self._initial_conditions, α=alpha, dt=dt,
+                                dx=self.dx, dy=self.dy, steps=steps)
+            else:
+                # Use flexible boundary conditions for all other cases
+                return solve_heat_with_boundaries(
+                    self._initial_conditions, boundary_spec,
+                    α=alpha, dt=dt, dx=self.dx, dy=self.dy, steps=steps
+                )
             
         elif self.equation == EquationType.WAVE:
             c = self.parameters.get('c', 1.0)
-            return solve_wave(self._initial_conditions, v0=self._initial_velocity,
-                            c=c, dt=dt, dx=self.dx, dy=self.dy, steps=steps)
+            
+            # Always use flexible boundary conditions for non-default boundaries
+            # Only use original solver for default Dirichlet(0.0)
+            if (self.boundary.type == BoundaryType.DIRICHLET and 
+                self.boundary.value == 0.0):
+                # Use original solver for default case (better performance)
+                return solve_wave(self._initial_conditions, v0=self._initial_velocity,
+                                c=c, dt=dt, dx=self.dx, dy=self.dy, steps=steps)
+            else:
+                # Use flexible boundary conditions for all other cases
+                return solve_wave_with_boundaries(
+                    self._initial_conditions, boundary_spec, 
+                    v0=self._initial_velocity, c=c, dt=dt, 
+                    dx=self.dx, dy=self.dy, steps=steps
+                )
         else:
             raise ValueError(f"Unknown equation type: {self.equation}")
     
