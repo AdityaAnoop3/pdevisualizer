@@ -33,4 +33,5 @@ Thumbs.db
 *.gif
 *.mp4
 *.avi
+*.png
 notebooks/.ipynb_checkpoints/
