@@ -34,4 +34,4 @@ Thumbs.db
 *.mp4
 *.avi
 *.png
-notebooks/.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/docs/_build/

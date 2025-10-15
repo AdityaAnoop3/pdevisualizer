@@ -1,0 +1,70 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      test_pypi:
+        description: 'Publish to Test PyPI instead of PyPI'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build-and-publish:
+    name: Build and publish to PyPI
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for trusted publishing
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+    
+    - name: Build package
+      run: python -m build
+    
+    - name: Check built artifacts
+      run: |
+        twine check dist/*
+        ls -lh dist/
+    
+    - name: Publish to Test PyPI
+      if: github.event_name == 'workflow_dispatch' && github.event.inputs.test_pypi == 'true'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        skip-existing: true
+    
+    - name: Publish to PyPI
+      if: github.event_name == 'release'
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+        skip-existing: true
+    
+    - name: Create release summary
+      if: github.event_name == 'release'
+      run: |
+        echo "## 📦 PyPI Package Published!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Install with:" >> $GITHUB_STEP_SUMMARY
+        echo '```bash' >> $GITHUB_STEP_SUMMARY
+        echo "pip install pdevisualizer==${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📚 [Documentation](https://pdevisualizer.readthedocs.io)" >> $GITHUB_STEP_SUMMARY
+        echo "🐙 [GitHub](https://github.com/AdityaAnoop3/pdevisualizer)" >> $GITHUB_STEP_SUMMARY
