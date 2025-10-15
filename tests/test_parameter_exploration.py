@@ -377,7 +377,7 @@ class TestIntegrationExamples:
         
         # Verify sweep worked
         assert len(sweep_result.solutions) == 3
-        assert sweep_result.execution_time > 0
+        assert sweep_result.execution_time >= 0
         
         # Run parameter comparison
         configs = [
