@@ -41,3 +41,4 @@ quick_setup.sh
 install_production_files.sh
 docs/_build/
 publish_to_pypi.sh
+create_api_docs.sh
