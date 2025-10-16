@@ -35,3 +35,9 @@ Thumbs.db
 *.avi
 *.png
 notebooks/.ipynb_checkpoints/docs/_build/
+
+# One-time setup scripts (not needed in repo)
+quick_setup.sh
+install_production_files.sh
+docs/_build/
+publish_to_pypi.sh
